@@ -1,16 +1,17 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.spatial.transform import Rotation
 from numba import jit
 import time
 
-# It appears self.timestep is forgotten in some situations update rules
+# Om een of andere reden zorgt cohesion rate dat er rondjeso m een willekeurig punt gedraaid worden.
 
 class Boids():
     """This class will be a group of Boids, consisting of both preditors and preys"""
     
     def __init__(self, num_boids=10, n_dim=2, timestep=1):
-        self.positions = np.random.uniform(-50,50, n_dim*num_boids).reshape(num_boids, n_dim)
-        self.velocities = np.random.normal(0, 5, n_dim*num_boids).reshape(num_boids, n_dim)
+        self.positions = np.random.uniform(-150,150, n_dim*num_boids).reshape(num_boids, n_dim)
+        self.velocities = np.random.normal(0, 0.1, n_dim*num_boids).reshape(num_boids, n_dim)
         self.velocities /= np.linalg.norm(self.velocities, axis=0, keepdims=True)
         
         self.num_boids = num_boids
@@ -47,7 +48,6 @@ class Boids():
         
         return vel_boid_update
     
-    #@jit
     def flock_alignment(self, idx, alpha, idx_group):
         """Steer towards the average heading of local flockmates with rate alpha
         Input: boid, flock of boid, effect strength
@@ -64,11 +64,9 @@ class Boids():
         
         return boid_dir_updated - boid_dir
     
-    #@jit
     def flock_separation(self, idx, alpha, idx_group):
         """Steer to avoid crowding local flockmates. If no flockmates are within the specified
         radius, the radius is increased"""
-        # Here, we need to find a rule that steers away proportional to the closeness to flockmates
         
         group_pos = self.positions[idx_group, :]
         group_vel = self.velocities[idx_group, :]
@@ -93,7 +91,10 @@ class Boids():
         We can choose to first move the center point one timestep forward"""
         
         if len(idx_group)>0:
-            group_pos = np.mean(self.positions[idx_group, :], axis=0)
+            if len(idx_group)>1:
+                group_pos = np.mean(self.positions[idx_group, :], axis=0)
+            else:
+                return 0 #group_pos = np.mean(self.positions[idx_group, :], axis=0)
         else:
             group_pos = np.array([0, 0])
             
@@ -113,13 +114,9 @@ class Boids():
         rotation_matrix = Rotation.from_euler('z', angle_new).as_matrix()[:2, :2]
         rotated_vector = np.dot(rotation_matrix, boid_vel) 
         
-        # if idx==2:
-        #     print("boid velocity", boid_vel)
-        #     print("boid rotated_vector", rotated_vector)
-        
         return rotated_vector - boid_vel
         
-    def flock_update(self, radius, rate):
+    def flock_update(self, radius, c_rate, a_rate, s_rate):
         
         store_position = np.full((self.num_boids, self.n_dim), 0, dtype=np.float64)
         store_velocity = np.full((self.num_boids, self.n_dim), 0, dtype=np.float64)
@@ -133,38 +130,25 @@ class Boids():
             while len(flock_idx)==0:
                 radius_local *= 1.1
                 flock_idx = self.get_local_flock_idx(idx, radius_local)
-            
-            #print(idx)
-            
-            store_velocity[idx, :] += self.flock_separation(idx, alpha=rate, idx_group=flock_idx)
-            store_velocity[idx, :] += self.flock_alignment(idx, alpha=rate, idx_group=flock_idx)
-            store_velocity[idx, :] += self.flock_cohesion(idx, alpha=rate, idx_group=flock_idx)
-            store_velocity[idx, :] += self.flock_cohesion(idx, alpha=0.0001)
+                 
+            store_velocity[idx, :] += self.flock_separation(idx, alpha=s_rate, idx_group=flock_idx)
+            store_velocity[idx, :] += self.flock_alignment(idx, alpha=a_rate, idx_group=flock_idx)
+            store_velocity[idx, :] += self.flock_cohesion(idx, alpha=c_rate, idx_group=flock_idx)
+            store_velocity[idx, :] += self.flock_cohesion(idx, alpha=0.01)
         
-        # print("self.velocities", self.velocities[2,])
-        # print("store_velocity", store_velocity[2,])
         self.velocities += store_velocity
         self.velocities /= np.linalg.norm(self.velocities, axis=1).reshape(-1, 1)
-        # print("self.velocities updated", self.velocities[2,])
-        # print("self.position", self.positions[2,])
-        # old_pos = self.positions[2,]
         self.positions += store_position + 1*self.timestep * self.velocities
-        # print("self.position updated", self.positions[2,])
-        # print("diff in positions in step:", self.positions[2,]- old_pos)
 
-flock = Boids(num_boids=60, n_dim=2, timestep=1)
-
-for i in range(200):
-    #time.sleep(0.1)
-    flock.flock_update(radius=20, rate=0.01)
-    # print(i)
-    plt.quiver(flock.positions[:,0], flock.positions[:,1],
-                flock.velocities[:,0], flock.velocities[:,1])
-    plt.xlim(-150, 150)
-    plt.ylim(-150, 150)
-    plt.show()
+if __name__ == "__main__":
     
-# Add this stuff to a pygame for better visualisation
+    flock = Boids(num_boids=60, n_dim=2, timestep=1)
 
-
+    for i in range(2000):
+        flock.flock_update(radius=10, c_rate=0.01, a_rate=0.01, s_rate=0.01, )
+        plt.quiver(flock.positions[:,0], flock.positions[:,1],
+                   flock.velocities[:,0], flock.velocities[:,1])
+        plt.xlim(-250, 250)
+        plt.ylim(-250, 250)
+        plt.show()
     
