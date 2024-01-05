@@ -5,11 +5,12 @@ import sys
 import pygame
 
 # TODO: 
-# 1) allow varying speeds among boids (contract towards 1 by updating |v| = np.tanh(|v|))
 # 2) try to apply the rotation trick of cohesion to other update rules
 # 3) include an euler forward step before calculating angle (done
 # 4) [FOCUS] separation does not appear to work. find out why.
-# 5) make cohesion proportional to distance. weak when close, strong when far.
+# 6) when finding angle between vectors, values outside [-1,1] are given as input to arccos -> crash
+# 7) add a predator boid from which the regular boids free (idea: use alignment such that 
+#    the the boids update to the velocity perpendicular to the predator velocity)
 
 def print_parameters(c, a, s, r):
     print(f"Cohesion: {c:.2f}, Alignment: {a:.2f}, Separation: {s:.2f}, Radius: {r}, ")
@@ -27,7 +28,7 @@ white = (255,255,255)
 arrow_length = 5
 
 # Initialise the flock
-flocksize = 100
+flocksize = 250
 radius = 50
 flock = Boids(num_boids=flocksize, n_dim=2, timestep=1)
 
