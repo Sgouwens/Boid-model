@@ -72,7 +72,7 @@ while running:
             
             print_parameters(cohesion_rate, alignment_rate, separation_rate, radius)
 
-    flock.flock_update(radius=30, c_rate=cohesion_rate, a_rate=alignment_rate, s_rate=separation_rate)
+    flock.flock_update(radius=10, c_rate=cohesion_rate, a_rate=alignment_rate, s_rate=separation_rate)
 
     screen.fill(blue)
     
@@ -80,11 +80,8 @@ while running:
     pygame.draw.circle(screen, blue, [width/2, width/2], radius=radius/2-1)
 
     for idx in range(flocksize):
-        
-        arrows = flock.polar_to_vec(flock.velocities, flock.angles)
-        666
-        arrow_end = [flock.positions[idx, 0] + arrow_length * arrows[idx, 0] + width/2,
-                      flock.positions[idx, 1] + arrow_length * arrows[idx, 1] + width/2]
+        arrow_end = [flock.positions[idx, 0] + arrow_length * flock.velocities[idx, 0] + width/2,
+                      flock.positions[idx, 1] + arrow_length * flock.velocities[idx, 1] + width/2]
         pygame.draw.line(screen, white, flock.positions[idx, :] + np.array([width/2, width/2]), arrow_end, 2)
 
     pygame.display.flip()
