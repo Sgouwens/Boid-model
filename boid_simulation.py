@@ -31,14 +31,14 @@ arrow_length =  5
 
 # Initialise the flock
 flocksize = 200
-radius_sim = 5
+radius = 50
 flock = Boids(num_boids=flocksize, n_dim=2, timestep=1)
 
 # Configurations
 cohesion_rate = 0.01
 alignment_rate = 0.01
 separation_rate = 0.01
-origin_rate = 0.03
+origin_rate = 0.01
 
 # Pygame loop
 clock = pygame.time.Clock() 
@@ -103,7 +103,7 @@ while running:
         
 
     pygame.display.flip()
-    clock.tick(60)
+    clock.tick(30)
 
 pygame.quit()
 sys.exit()

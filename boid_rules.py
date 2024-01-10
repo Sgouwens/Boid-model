@@ -40,36 +40,28 @@ class Boids():
         patat = np.where(flock_idx)[0]
         return patat
         
-    def flock_alignment(self, idx, alpha, idx_group):
+    def flock_alignment(self, boid_x, boid_v, boid_a, group_x, group_v, group_a, alpha):
         """Steer towards the average heading of local flockmates with rate alpha
         Input: boid, flock of boid, effect strength
         Output: Size of velocity nudge towards average flock direction"""
-        boid_angle = self.angles[idx]
-        group_mean_angle = np.mean(self.angles[idx_group])
         
-        angle_effect = alpha * (boid_angle - group_mean_angle)
+        group_mean_angle = np.mean(group_a)
+        angle_effect = alpha * (boid_a - group_mean_angle)
         return angle_effect
         
-    def flock_separation(self, idx, alpha, idx_group):
+    def flock_separation(self, boid_x, boid_v, boid_a, group_x, group_v, group_a, alpha):
         """Steer to avoid crowding local flockmates. If no flockmates are within the specified
         radius, the radius is increased"""
-        group_pos = self.positions[idx_group, :]
-        group_vel = self.velocities[idx_group]
-        group_ang = self.angles[idx_group]
-        
-        boid_pos = self.positions[idx, :]
-        boid_vel = self.velocities[idx]
-        boid_ang = self.angles[idx]
-        
+                
         # Simple Euler forward approximation of next position
-        group_pos_update = self.next_position(group_pos, group_vel, group_ang)
-        boid_pos_update = self.next_position(boid_pos, boid_vel, boid_ang)
+        group_pos_update = self.next_position(group_x, group_v, group_a)
+        boid_pos_update = self.next_position(boid_x, boid_v, boid_a)
         
         repulsion = norm(boid_pos_update - group_pos_update, axis=1) ** (-2)
         repulsion /= np.sum(np.abs(repulsion))
         
-        vector_boid = self.polar_to_vec(boid_vel, boid_ang)
-        vector_group = self.polar_to_vec(group_vel, group_ang)
+        vector_boid = self.polar_to_vec(boid_v, boid_a)
+        vector_group = self.polar_to_vec(group_v, group_a)
         
         vector_mean = np.mean(vector_group, axis=0) 
         vector_diff = vector_mean - vector_boid
@@ -78,7 +70,7 @@ class Boids():
         
         return alpha * angles_change
         
-    def flock_cohesion(self, idx, alpha, idx_group=[], centerpoint=None):
+    def flock_cohesion2(self, idx, alpha, idx_group=[], centerpoint=None):
         """steer to move towards the average position (center of mass) of local flockmates
         currently, the center point is still. 
         We can choose to first move the center point one timestep forward"""
@@ -106,6 +98,32 @@ class Boids():
         sign = np.sign(np.linalg.det((boid_dir, boid_to_center)))
         
         return alpha * sign * angle
+
+    def flock_cohesion(self, boid_x, boid_v, boid_a, group_x, group_v, group_a, alpha, centerpoint=None):
+        """steer to move towards the average position (center of mass) of local flockmates
+        currently, the center point is still. 
+        We can choose to first move the center point one timestep forward"""
+        if centerpoint is None:
+            if len(group_a)>0:
+                group_pos = self.next_position(group_x, group_v, group_a)
+                group_pos = np.mean(group_pos, axis=0)
+            else:
+                return 0
+        else:
+            group_pos = centerpoint
+            
+        position_upd = self.next_position(boid_x, boid_v, boid_a)
+        
+        boid_dir = position_upd - boid_x
+        boid_to_center = group_pos - boid_x
+            
+        dotproduct = np.dot(boid_dir, boid_to_center)
+        magnitude_prod = norm(boid_dir) * norm(boid_to_center)
+        boid_a = np.arccos(dotproduct/magnitude_prod)
+        
+        sign = np.sign(np.linalg.det((boid_dir, boid_to_center)))
+        
+        return alpha * sign * boid_a
         
     def flock_update(self, radius, c_rate, a_rate, s_rate, o_rate, center=np.array([0,0])):
         """Determines the flock for each boid, then computes the effects of alignment, cohesion
@@ -120,35 +138,30 @@ class Boids():
                 flock_idx = self.get_local_flock_idx(idx, radius_local)
                 radius_local *= 1.1
                 
-            store_angles[idx] += self.flock_separation(idx, alpha=s_rate, idx_group=flock_idx)
-            store_angles[idx] -= self.flock_alignment(idx, alpha=a_rate, idx_group=flock_idx)
-            store_angles[idx] -= self.flock_cohesion(idx, alpha=c_rate, idx_group=flock_idx)
-            store_angles[idx] -= self.flock_cohesion(idx, alpha=o_rate, centerpoint=center)
-            store_angles += self.add_noise_velocity(0.001)
+            boid = (self.positions[idx, :], 
+                    self.velocities[idx], 
+                    self.angles[idx])
+            
+            group = (self.positions[flock_idx, :], 
+                     self.velocities[flock_idx], 
+                     self.angles[flock_idx])
+                
+            store_angles[idx] -= self.flock_separation(*boid, *group, alpha=s_rate)
+            store_angles[idx] -= self.flock_alignment(*boid, *group, alpha=a_rate)
+            store_angles[idx] -= self.flock_cohesion(*boid, *group, alpha=c_rate)
+            store_angles[idx] -= self.flock_cohesion(*boid, *group, alpha=o_rate, centerpoint=center)
+            store_angles      -= self.add_noise_velocity(0.001)
             
         self.angles += store_angles
         self.angles = self.angles % (2*np.pi)
         self.positions = self.next_position(self.positions, self.velocities, self.angles)
         
-        
-            
 # This part is for checking computation speed
 if __name__ == "__main__":    
     t = time.perf_counter()
-    flock = Boids(num_boids=10, n_dim=2, timestep=1)
-    for i in range(2):
+    flock = Boids(num_boids=200, n_dim=2, timestep=1)
+    for i in range(100):
         flock.flock_update(radius=10, c_rate=0.0, a_rate=0.00, s_rate=0.1, o_rate=0.00)
         plt.quiver(flock.positions[:,1], flock.positions[:,0],
                     flock.velocities*np.cos(flock.angles), flock.velocities*np.sin(flock.angles))
-    #print(time.perf_counter() - t)
-    
-    
-    # def contract_velocities():
-    #     # if contraction:
-    #     #     velocities = norm(self.velocities, axis=1).reshape(-1, 1)
-    #     #     velocities_cor = 1 + np.tanh(velocities-1)
-    #     #     self.velocities /= norm(self.velocities, axis=1).reshape(-1, 1)
-    #     #     self.velocities *= velocities_cor
-    #     # else:
-    #     #     self.velocities /= norm(self.velocities, axis=1).reshape(-1, 1)
-    #     pass
+    print(time.perf_counter() - t)
