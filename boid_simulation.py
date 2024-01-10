@@ -4,6 +4,8 @@ import time
 import sys
 import pygame
 
+import seaborn as sns
+
 # TODO: 
 # 9) add a predator boid from which the regular boids free (idea: use alignment such that 
 #    the the boids update to the velocity perpendicular to the predator velocity)
@@ -12,7 +14,7 @@ def print_parameters(c, a, s, r):
     print(f"Cohesion: {c:.2f}, Alignment: {a:.2f}, Separation: {s:.2f}, Radius: {r}, ")
 
 pygame.init()
-size = 500
+size = 800
 screen = pygame.display.set_mode((size, size))
 
 # Set up colors
@@ -28,15 +30,15 @@ new_center = np.array([0, 0])
 arrow_length =  5
 
 # Initialise the flock
-flocksize = 100
-radius = 50
+flocksize = 200
+radius_sim = 5
 flock = Boids(num_boids=flocksize, n_dim=2, timestep=1)
 
 # Configurations
 cohesion_rate = 0.01
 alignment_rate = 0.01
 separation_rate = 0.01
-origin_rate = 0.01
+origin_rate = 0.03
 
 # Pygame loop
 clock = pygame.time.Clock() 
@@ -80,7 +82,7 @@ while running:
                 print(f"Centerpoint updated to: ({mouse_x}, {mouse_y})")
             print_parameters(cohesion_rate, alignment_rate, separation_rate, radius)
             
-    flock.flock_update(radius=20, 
+    flock.flock_update(radius=radius_sim, 
                        c_rate=cohesion_rate, 
                        a_rate=alignment_rate, 
                        s_rate=separation_rate,
@@ -98,9 +100,10 @@ while running:
         arrow_end = [flock.positions[idx, 0] + arrow_length * arrows[idx, 0] + size/2,
                       flock.positions[idx, 1] + arrow_length * arrows[idx, 1] + size/2]
         pygame.draw.line(screen, white, flock.positions[idx, :] + np.array([size/2, size/2]), arrow_end, 2)
+        
 
     pygame.display.flip()
-    clock.tick(30)
+    clock.tick(60)
 
 pygame.quit()
 sys.exit()

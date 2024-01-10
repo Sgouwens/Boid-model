@@ -13,9 +13,9 @@ class Boids():
         """Only the number of boids and dimensions are needed. Currently only n_dim=2 
         is supported. Leave unchanged for more natural starting conditions."""
         self.positions = np.random.uniform(-20,20, n_dim*num_boids).reshape(num_boids, n_dim)
-        self.velocities = np.random.normal(1, 0.05, num_boids).reshape(-1, 1)
+        self.velocities = np.random.normal(1, 0.15, num_boids).reshape(-1, 1)
         self.angles = np.random.uniform(0, 2*np.pi, num_boids).reshape(-1, 1)
-        self.angles = np.full(num_boids, 2*np.pi/4).reshape(-1, 1)
+        #self.angles = np.full(num_boids, 2*np.pi/2).reshape(-1, 1)
         self.num_boids = num_boids
         self.n_dim = n_dim
         self.timestep = timestep
@@ -67,9 +67,16 @@ class Boids():
         
         repulsion = norm(boid_pos_update - group_pos_update, axis=1) ** (-2)
         repulsion /= np.sum(np.abs(repulsion))
-        angle_change = np.dot(repulsion, group_ang)
         
-        return alpha * angle_change
+        vector_boid = self.polar_to_vec(boid_vel, boid_ang)
+        vector_group = self.polar_to_vec(group_vel, group_ang)
+        
+        vector_mean = np.mean(vector_group, axis=0) 
+        vector_diff = vector_mean - vector_boid
+        
+        angles_change = np.arctan2(vector_diff[1], vector_diff[0])
+        
+        return alpha * angles_change
         
     def flock_cohesion(self, idx, alpha, idx_group=[], centerpoint=None):
         """steer to move towards the average position (center of mass) of local flockmates
@@ -113,13 +120,14 @@ class Boids():
                 flock_idx = self.get_local_flock_idx(idx, radius_local)
                 radius_local *= 1.1
                 
-            store_angles[idx] -= self.flock_separation(idx, alpha=s_rate, idx_group=flock_idx)
+            store_angles[idx] += self.flock_separation(idx, alpha=s_rate, idx_group=flock_idx)
             store_angles[idx] -= self.flock_alignment(idx, alpha=a_rate, idx_group=flock_idx)
             store_angles[idx] -= self.flock_cohesion(idx, alpha=c_rate, idx_group=flock_idx)
             store_angles[idx] -= self.flock_cohesion(idx, alpha=o_rate, centerpoint=center)
-            store_angles += self.add_noise_velocity(0.000)
+            store_angles += self.add_noise_velocity(0.001)
             
         self.angles += store_angles
+        self.angles = self.angles % (2*np.pi)
         self.positions = self.next_position(self.positions, self.velocities, self.angles)
         
         
@@ -129,8 +137,7 @@ if __name__ == "__main__":
     t = time.perf_counter()
     flock = Boids(num_boids=10, n_dim=2, timestep=1)
     for i in range(2):
-        print(i)
-        flock.flock_update(radius=10, c_rate=0.05, a_rate=0.05, s_rate=0.01, o_rate=0.01)
+        flock.flock_update(radius=10, c_rate=0.0, a_rate=0.00, s_rate=0.1, o_rate=0.00)
         plt.quiver(flock.positions[:,1], flock.positions[:,0],
                     flock.velocities*np.cos(flock.angles), flock.velocities*np.sin(flock.angles))
     #print(time.perf_counter() - t)
