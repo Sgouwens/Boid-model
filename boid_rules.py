@@ -13,7 +13,7 @@ class Boids():
         """Only the number of boids and dimensions are needed. Currently only n_dim=2 
         is supported. Leave unchanged for more natural starting conditions."""
         self.positions = np.random.uniform(-20,20, n_dim*num_boids).reshape(num_boids, n_dim)
-        self.velocities = np.random.normal(1, 0.15, num_boids).reshape(-1, 1)
+        self.velocities = np.random.normal(1, 0.05, num_boids).reshape(-1, 1)
         self.angles = np.random.uniform(0, 2*np.pi, num_boids).reshape(-1, 1)
         #self.angles = np.full(num_boids, 2*np.pi/2).reshape(-1, 1)
         self.num_boids = num_boids
