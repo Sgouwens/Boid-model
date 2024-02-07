@@ -1,5 +1,8 @@
 # Boid simulation
 
+![screenshot boids](https://github.com/Sgouwens/Boid-model/assets/150426079/261f6410-f257-4c0d-9f61-e92c402a4402)
+
+
 In this project, bird-oid (boid) objects are simulated. Given three rules, complex group behaviour emerges. The rules that we base our model on is:
 
 1) Separation: steer to avoid crowding local flockmates,
@@ -19,9 +22,13 @@ $$v_1^{(t+1)} = v_1^{(t)} + \sum_{j\in J} S(a, x_1, x_2, v_1, v_2) + A(a, x_1, x
 This models a change in velocity. The updated velocity is then used to update the position.
 
 # Note
+Movement depends on the rates set for cohesion, separation and alignment. Controls are added to steer the birds. Using a click of the mouse steers the birds towards the clicked location.
+the keys _o_ and _p_ increase and decrease the tendency towards the red dot.
+the keys _q_ and _w_ increase and decrease separation.
+the keys _a_ and _s_ increase and decrease radius at which boids influence each other.
+the keys _arrow down_ and _arrow up_ increase and decrease cohesion.
+the keys _arrow left_ and _right_ increase and decrease alignment.
 
-This project is unfinished. The current implementation of the separation step requires a better technical solution.
 
 # Ideas
-
 Once the flock behaves more naturally, the plan is to introduce predators which hunt the boids. Extra boid behaviour needs to be introduced, that is, moving away from the predator when it is detected. Rotating the boids velocity to the perpendicular velocity vector of the predator is the most natural solution. This is how groups of sardines respond to shark, for example.
